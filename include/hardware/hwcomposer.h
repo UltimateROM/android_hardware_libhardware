@@ -35,6 +35,18 @@ __BEGIN_DECLS
 #define HWC_DEVICE_API_VERSION      HWC_DEVICE_API_VERSION_0_1
 #define HWC_API_VERSION             HWC_DEVICE_API_VERSION
 
+/* Users of this header can define HWC_REMOVE_DEPRECATED_VERSIONS to test that
+ * they still work with just the current version declared, before the
+ * deprecated versions are actually removed.
+ *
+ * To find code that still depends on the old versions, set the #define to 1
+ * here. Code that explicitly sets it to zero (rather than simply not defining
+ * it) will still see the old versions.
+ */
+#if !defined(HWC_REMOVE_DEPRECATED_VERSIONS)
+#define HWC_REMOVE_DEPRECATED_VERSIONS 0
+#endif
+
 /*****************************************************************************/
 
 /**
@@ -215,6 +227,12 @@ typedef struct hwc_layer_1 {
              */
             hwc_region_t visibleRegionScreen;
 
+#ifdef QCOM_BSP
+            /* Region of the layer changed in the source buffer since
+             * previous frame */
+            hwc_rect_t dirtyRect;
+#endif
+
             /* Sync fence object that will be signaled when the buffer's
              * contents are available. May be -1 if the contents are already
              * available. This field is only valid during set(), and should be
@@ -299,29 +317,8 @@ typedef struct hwc_layer_1 {
              */
             uint8_t planeAlpha;
 
-            /* Pad to 32 bits */
+            /* reserved for future use */
             uint8_t _pad[3];
-
-            /*
-             * Availability: HWC_DEVICE_API_VERSION_1_5
-             *
-             * This defines the region of the source buffer that has been
-             * modified since the last frame.
-             *
-             * If surfaceDamage.numRects > 0, then it may be assumed that any
-             * portion of the source buffer not covered by one of the rects has
-             * not been modified this frame. If surfaceDamage.numRects == 0,
-             * then the whole source buffer must be treated as if it had been
-             * modified.
-             *
-             * If the layer's contents are not modified relative to the prior
-             * prepare/set cycle, surfaceDamage will contain exactly one empty
-             * rect ([0, 0, 0, 0]).
-             *
-             * The damage rects are relative to the pre-transformed buffer, and
-             * their origin is the top-left corner.
-             */
-            hwc_region_t surfaceDamage;
         };
     };
 
@@ -330,13 +327,13 @@ typedef struct hwc_layer_1 {
      * For 64-bit mode, this struct is 120 bytes (and 8-byte aligned), and needs
      * to be padded as such to maintain binary compatibility.
      */
-    uint8_t reserved[120 - 112];
+    uint8_t reserved[120 - 96];
 #else
     /*
      * For 32-bit mode, this struct is 96 bytes, and needs to be padded as such
      * to maintain binary compatibility.
      */
-    uint8_t reserved[96 - 84];
+    uint8_t reserved[96 - 76];
 #endif
 
 } hwc_layer_1_t;
@@ -827,6 +824,10 @@ static inline int hwc_close_1(hwc_composer_device_1_t* device) {
 }
 
 /*****************************************************************************/
+
+//#ifdef TARGET_NEEDS_HWC_V0
+#include <hardware/hwcomposer_v0.h>
+//#endif
 
 __END_DECLS
 

@@ -32,12 +32,30 @@ __BEGIN_DECLS
 
 #define HWC_MODULE_API_VERSION_0_1  HARDWARE_MODULE_API_VERSION(0, 1)
 
+//#ifdef TARGET_NEEDS_HWC_V0
+#define HWC_DEVICE_API_VERSION_0_1  HARDWARE_DEVICE_API_VERSION_2(0, 1, HWC_HEADER_VERSION)
+#define HWC_DEVICE_API_VERSION_0_2  HARDWARE_DEVICE_API_VERSION_2(0, 2, HWC_HEADER_VERSION)
+#define HWC_DEVICE_API_VERSION_0_3  HARDWARE_DEVICE_API_VERSION_2(0, 3, HWC_HEADER_VERSION)
+/*#else
 #define HWC_DEVICE_API_VERSION_1_0  HARDWARE_DEVICE_API_VERSION_2(1, 0, HWC_HEADER_VERSION)
 #define HWC_DEVICE_API_VERSION_1_1  HARDWARE_DEVICE_API_VERSION_2(1, 1, HWC_HEADER_VERSION)
 #define HWC_DEVICE_API_VERSION_1_2  HARDWARE_DEVICE_API_VERSION_2(1, 2, HWC_HEADER_VERSION)
 #define HWC_DEVICE_API_VERSION_1_3  HARDWARE_DEVICE_API_VERSION_2(1, 3, HWC_HEADER_VERSION)
 #define HWC_DEVICE_API_VERSION_1_4  HARDWARE_DEVICE_API_VERSION_2(1, 4, HWC_HEADER_VERSION)
-#define HWC_DEVICE_API_VERSION_1_5  HARDWARE_DEVICE_API_VERSION_2(1, 5, HWC_HEADER_VERSION)
+#endif
+*/
+
+#ifdef STE_HARDWARE
+/* STE specific modifications to the hwcomposer API require
+ * a separate DEVICE_API_VERSION since the resulting structures
+ * aren't binary compatible with the vanilla android version.
+ * We don't actually change the version number itself since
+ * that could potentially conflict with future versions of hwcomposer.
+ * Rather we just add the possibility to check for the presence
+ * of STE modifications.
+ */
+#define HWC_DEVICE_API_VERSION_0_3_STE HWC_DEVICE_API_VERSION_0_3
+#endif
 
 enum {
     /* hwc_composer_device_t::set failed in EGL */
@@ -87,7 +105,14 @@ enum {
      * composition type of this layer, then the hwcomposer will allow async
      * position updates to this layer via setCursorPositionAsync().
      */
-    HWC_IS_CURSOR_LAYER = 0x00000002
+    HWC_IS_CURSOR_LAYER = 0x00000002,
+
+    /*
+     * HWC_SCREENSHOT_ANIMATOR_LAYER is set by surfaceflinger to indicate that this
+     * layer is a screenshot animating layer.  HWC uses this info to disable rotation
+     * animation on External Display
+     */
+    HWC_SCREENSHOT_ANIMATOR_LAYER = 0x00000004
 };
 
 /*
@@ -116,8 +141,11 @@ enum {
        cursor overlay hardware. hwcomposer will also all async position updates
        of this layer outside of the normal prepare()/set() loop. Added in
        HWC_DEVICE_API_VERSION_1_4. */
-    HWC_CURSOR_OVERLAY =  5
- };
+    HWC_CURSOR_OVERLAY =  5,
+
+    /* this layer will be handled in the HWC, using a blit engine */
+    HWC_BLIT = 6,
+};
 /*
  * hwc_layer_t::blending values
  */
@@ -151,11 +179,13 @@ enum {
 /* attributes queriable with query() */
 enum {
     /*
+     * Availability: HWC_DEVICE_API_VERSION_0_2
      * Must return 1 if the background layer is supported, 0 otherwise.
      */
     HWC_BACKGROUND_LAYER_SUPPORTED      = 0,
 
     /*
+     * Availability: HWC_DEVICE_API_VERSION_0_3
      * Returns the vsync period in nanoseconds.
      *
      * This query is not used for HWC_DEVICE_API_VERSION_1_1 and later.
@@ -192,41 +222,32 @@ enum {
      */
     HWC_DISPLAY_DPI_X                       = 4,
     HWC_DISPLAY_DPI_Y                       = 5,
-
-    /* Indicates which of the vendor-defined color transforms is provided by
-     * this configuration. */
-    HWC_DISPLAY_COLOR_TRANSFORM             = 6,
+    /* Indicates if the display is secure
+     * For HDMI/WFD if the sink supports HDCP, it will be true
+     * Primary panel is always considered secure
+     */
+    HWC_DISPLAY_SECURE                      = 6,
 };
 
 /* Allowed events for hwc_methods::eventControl() */
 enum {
-    HWC_EVENT_VSYNC     = 0
+    HWC_EVENT_VSYNC     = 0,
+    HWC_EVENT_ORIENTATION
 };
 
 /* Display types and associated mask bits. */
 enum {
     HWC_DISPLAY_PRIMARY     = 0,
     HWC_DISPLAY_EXTERNAL    = 1,    // HDMI, DP, etc.
-#ifdef QTI_BSP
-    HWC_DISPLAY_TERTIARY    = 2,
-    HWC_DISPLAY_VIRTUAL     = 3,
-
-    HWC_NUM_PHYSICAL_DISPLAY_TYPES = 3,
-    HWC_NUM_DISPLAY_TYPES          = 4,
-#else
     HWC_DISPLAY_VIRTUAL     = 2,
 
     HWC_NUM_PHYSICAL_DISPLAY_TYPES = 2,
     HWC_NUM_DISPLAY_TYPES          = 3,
-#endif
 };
 
 enum {
     HWC_DISPLAY_PRIMARY_BIT     = 1 << HWC_DISPLAY_PRIMARY,
     HWC_DISPLAY_EXTERNAL_BIT    = 1 << HWC_DISPLAY_EXTERNAL,
-#ifdef QTI_BSP
-    HWC_DISPLAY_TERTIARY_BIT    = 1 << HWC_DISPLAY_TERTIARY,
-#endif
     HWC_DISPLAY_VIRTUAL_BIT     = 1 << HWC_DISPLAY_VIRTUAL,
 };
 

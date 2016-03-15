@@ -44,11 +44,13 @@ __BEGIN_DECLS
 #define BT_PROFILE_HEALTH_ID "health"
 #define BT_PROFILE_SOCKETS_ID "socket"
 #define BT_PROFILE_HIDHOST_ID "hidhost"
+#define BT_PROFILE_HIDDEV_ID "hiddev"
 #define BT_PROFILE_PAN_ID "pan"
 #define BT_PROFILE_MAP_CLIENT_ID "map_client"
 #define BT_PROFILE_SDP_CLIENT_ID "sdp"
 #define BT_PROFILE_GATT_ID "gatt"
 #define BT_PROFILE_AV_RC_ID "avrcp"
+#define WIPOWER_PROFILE_ID "wipower"
 #define BT_PROFILE_AV_RC_CTRL_ID "avrcp_ctrl"
 
 /** Bluetooth Address */
@@ -355,6 +357,10 @@ typedef void (*callback_thread_event)(bt_cb_thread_evt evt);
 /* Receive any HCI event from controller. Must be in DUT Mode for this callback to be received */
 typedef void (*dut_mode_recv_callback)(uint16_t opcode, uint8_t *buf, uint8_t len);
 
+/** Bluetooth HCI event Callback */
+/* Receive any HCI event from controller for raw commands */
+typedef void (*hci_event_recv_callback)(uint8_t event_code, uint8_t *buf, uint8_t len);
+
 /* LE Test mode callbacks
 * This callback shall be invoked whenever the le_tx_test, le_rx_test or le_test_end is invoked
 * The num_packets is valid only for le_test_end command */
@@ -388,6 +394,7 @@ typedef struct {
     dut_mode_recv_callback dut_mode_recv_cb;
     le_test_mode_callback le_test_mode_cb;
     energy_info_callback energy_info_cb;
+    hci_event_recv_callback hci_event_recv_cb;
 } bt_callbacks_t;
 
 typedef void (*alarm_cb)(void *data);
@@ -438,13 +445,16 @@ typedef struct {
     int (*init)(bt_callbacks_t* callbacks );
 
     /** Enable Bluetooth. */
-    int (*enable)(void);
+    int (*enable)(bool guest_mode);
 
     /** Disable Bluetooth. */
     int (*disable)(void);
 
     /** Closes the interface. */
     void (*cleanup)(void);
+
+    /** SSR cleanup. */
+    void (*ssrcleanup)(void);
 
     /** Get all Bluetooth Adapter properties at init */
     int (*get_adapter_properties)(void);
@@ -520,6 +530,10 @@ typedef struct {
 
     /* Send any test HCI (vendor-specific) command to the controller. Must be in DUT Mode */
     int (*dut_mode_send)(uint16_t opcode, uint8_t *buf, uint8_t len);
+
+    /* Send any test HCI command to the controller. */
+    int (*hci_cmd_send)(uint16_t opcode, uint8_t *buf, uint8_t len);
+
     /** BLE Test Mode APIs */
     /* opcode MUST be one of: LE_Receiver_Test, LE_Transmitter_Test, LE_Test_End */
     int (*le_test_mode)(uint16_t opcode, uint8_t *buf, uint8_t len);
@@ -547,6 +561,9 @@ typedef struct {
      * Clear /data/misc/bt_config.conf and erase all stored connections
      */
     int (*config_clear)(void);
+
+    /** BT stack Test interface */
+    const void* (*get_testapp_interface)(int test_app_profile);
 
     /**
      * Clear (reset) the dynamic portion of the device interoperability database.

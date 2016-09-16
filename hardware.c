@@ -122,6 +122,62 @@ static int load(const char *id,
     return status;
 }
 
+/**
+ * Load the file defined by the variant and if successful
+ * return the dlopen handle and the hmi.
+ * @return 0 = success, !0 = failure.
+ */
+static int load_simple(const char *path,
+        struct hw_module_t **pHmi)
+{
+    int status = -EINVAL;
+    void *handle = NULL;
+    struct hw_module_t *hmi = NULL;
+
+    /*
+     * load the symbols resolving undefined symbols before
+     * dlopen returns. Since RTLD_GLOBAL is not or'd in with
+     * RTLD_NOW the external symbols will not be global
+     */
+    handle = dlopen(path, RTLD_NOW);
+    if (handle == NULL) {
+        char const *err_str = dlerror();
+        ALOGE("load: module=%s\n%s", path, err_str?err_str:"unknown");
+        status = -EINVAL;
+        goto done;
+    }
+
+    /* Get the address of the struct hal_module_info. */
+    const char *sym = HAL_MODULE_INFO_SYM_AS_STR;
+    hmi = (struct hw_module_t *)dlsym(handle, sym);
+    if (hmi == NULL) {
+        ALOGE("load: couldn't find symbol %s", sym);
+        status = -EINVAL;
+        goto done;
+    }
+
+    hmi->dso = handle;
+
+    /* success */
+    status = 0;
+
+    done:
+    if (status != 0) {
+        hmi = NULL;
+        if (handle != NULL) {
+            dlclose(handle);
+            handle = NULL;
+        }
+    } else {
+        ALOGE("loaded HAL path=%s hmi=%p handle=%p",
+                path, *pHmi, handle);
+    }
+
+    *pHmi = hmi;
+
+    return status;
+}
+
 /*
  * Check if a HAL with given name and subname exists, if so return 0, otherwise
  * otherwise return negative.  On success path will contain the path to the HAL.
@@ -193,6 +249,11 @@ found:
     /* load the module, if this fails, we're doomed, and we should not try
      * to load a different variant. */
     return load(class_id, path, module);
+}
+
+int hw_get_module_by_path(char *path, const struct hw_module_t **module)
+{
+    return load_simple(path, module);
 }
 
 int hw_get_module(const char *id, const struct hw_module_t **module)

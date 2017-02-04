@@ -219,6 +219,14 @@ typedef struct hw_device_t {
 int hw_get_module(const char *id, const struct hw_module_t **module);
 
 /**
+ * Get the module info associated with a module by path.
+ *
+ * @return: 0 == success, <0 == error and *module == NULL
+ */
+int hw_get_module_by_path(const char *path,
+                           const struct hw_module_t **module);
+
+/**
  * Get the module info associated with a module instance by class 'class_id'
  * and instance 'inst'.
  *

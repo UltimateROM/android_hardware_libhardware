@@ -18,8 +18,8 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE := power.default
 LOCAL_MODULE_RELATIVE_PATH := hw
-LOCAL_SRC_FILES := power.c feature.c
-LOCAL_SHARED_LIBRARIES := liblog libcutils
+LOCAL_SRC_FILES := power.c
+LOCAL_SHARED_LIBRARIES := liblog
 LOCAL_MODULE_TAGS := optional
 
 include $(BUILD_SHARED_LIBRARY)

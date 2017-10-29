@@ -24,7 +24,6 @@
 
 #include <hardware/hardware.h>
 #include <hardware/power.h>
-#include "feature.h"
 
 static void power_init(struct power_module *module)
 {
@@ -60,5 +59,4 @@ struct power_module HAL_MODULE_INFO_SYM = {
     .init = power_init,
     .setInteractive = power_set_interactive,
     .powerHint = power_hint,
-    .setFeature = set_feature,
 };
